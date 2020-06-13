@@ -225,3 +225,9 @@ fabric.properties
 .idea/$CACHE_FILE$
 
 # End of https://www.toptal.com/developers/gitignore/api/pycharm
+.idea/discord-bot.iml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
