@@ -10,8 +10,10 @@ import asyncio
 from bs4 import BeautifulSoup
 
 # Define list of URLs and other info (URL, stock, still_in_stock, product name, last checked)
-url_list = [["https://www.microcenter.com/product/510223/asus-b450-i-rog-strix-gaming-amd-am4-mitx-motherboard?storeid=121", '', 0, "ASUS B450-I", 0],
-            ["https://www.microcenter.com/product/510838/gigabyte-b450i-aorus-pro-wifi-amd-am4-mini-itx-motherboard?storeid=121", '', 0, "Gigabyte B450I", 0]]
+url_list = [#["https://www.microcenter.com/product/510223/asus-b450-i-rog-strix-gaming-amd-am4-mitx-motherboard?storeid=121", '', 0, "ASUS B450-I", 0],
+            #["https://www.microcenter.com/product/510838/gigabyte-b450i-aorus-pro-wifi-amd-am4-mini-itx-motherboard?storeid=121", '', 0, "Gigabyte B450I", 0]
+            ["https://www.microcenter.com/search/search_results.aspx?Ntt=GeForce+RTX+3060+Ti&searchButton=search&storeid=121", '', 0, "RTX 3060 Ti", 0],
+            ["https://www.microcenter.com/search/search_results.aspx?Ntt=rtx+3070+graphics+card&searchButton=search&storeid=121", '', 0, "RTX 3070", 0]]
 polling_freq = 300                                                              # in seconds
 
 # Setting up environment
@@ -24,9 +26,13 @@ bot = commands.Bot(command_prefix='!', description="In fact a piece of doodoo")
 
 # Scrapes the stock of the URL from the Microcenter website and returns the stock
 def scrape_stock(url):
+    print("Scraping " + url + "...")
     response = requests.get(url)
     soup_ = BeautifulSoup(response.content, 'html.parser')
-    store_stock = soup_.find(class_="inventoryCnt").text
+    tablist = soup_.find('div', class_="my-store-only")
+    stock_string = tablist.find('li').text
+    print(stock_string)
+    store_stock = str(stock_string.split(" ")[0])
     return store_stock
 
 # Event that triggers once the bot is ready
@@ -110,7 +116,7 @@ async def fetch_stock():
                 last_checked = url_list[i][4] = datetime.datetime.now()
                 print(str(last_checked) + " - Fetched " + name + ": " + stock)
 
-                if stock != "Sold Out":                                         # If in stock
+                if stock != "0":                                         # If in stock
                     if still_in_stock == 0:                                     # If just in stock
                         await channel_computer_parts.send(name + " is in stock at MicroCenter! - " + stock + "\n" + url)
                         url_list[i][2] = 1
