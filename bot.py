@@ -22,7 +22,8 @@ load_dotenv()
 # Discord bot set up
 TOKEN = os.getenv('DISCORD_TOKEN')
 # SERVER = 'Doodooland'
-bot = commands.Bot(command_prefix='!', description="In fact a piece of doodoo")
+bot = commands.Bot(command_prefix='dd.', description="In fact a piece of doodoo")
+vc = 1
 
 # Scrapes the stock of the URL from the Microcenter website and returns the stock
 def scrape_stock(url):
@@ -41,6 +42,35 @@ async def on_ready():
     await bot.change_presence(activity=discord.Game(name='with its own doodoo'))
     print('--------------------\nLogged in as ' + bot.user.name)
     print('ID: ' + str(bot.user.id) + '\n' + str(datetime.datetime.now()) + '\n--------------------')
+    global vc
+
+    try:
+        doohole_channel = bot.get_channel(808025131690754089)
+        print('Connected to #' + str(doohole_channel))
+        vc = await doohole_channel.connect()
+        print('Entered the doohole')
+    except Exception as e:
+        print(e)
+
+# Command that plays a soundbite when someone joins the voice channel
+@bot.event
+async def on_voice_state_update(member, before, after):
+    # print("Member: " + str(member))
+    # print("Before: " + str(before))
+    # print("After: " + str(after))
+    global vc
+
+    if member != "Doodoo Bot#1143" and before.channel is None and after.channel.name == "Doodoo Bot's Doohole":
+        print("Someone joined my doohole!")
+        fart = vc.play(discord.FFmpegPCMAudio("fart.mp3"))
+        # while vc.is_playing():
+        # await asyncio.sleep(0.1)
+        await asyncio.sleep(0.75)
+        print("Done farting")
+        await member.move_to(None)
+
+    if member != "Doodoo Bot#1143" and after.channel is None and before.channel.name == "Doodoo Bot's Doohole":
+        vc.stop()
 
 # Command that provides last updated information in url_list to user
 @bot.command()
@@ -100,7 +130,7 @@ async def fetch_stock():
     global url_list, channel_computer_parts
     try:
         channel_computer_parts = bot.get_channel(717484895714410517)
-        print('Connected to #' + str(channel_computer_parts))
+        print('Connecting to #' + str(channel_computer_parts))
     except Exception as e:
         print(e)
 
