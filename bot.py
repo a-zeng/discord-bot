@@ -69,7 +69,7 @@ async def on_voice_state_update(member, before, after):
         print("Done farting")
         await member.move_to(None)
 
-    if member != "Doodoo Bot#1143" and after.channel is None and before.channel.name == "Doodoo Bot's Doohole":
+    if member != "Doodoo Bot#1143" and after.channel is None: # and before.channel.name == "Doodoo Bot's Doohole":
         vc.stop()
 
 # Command that provides last updated information in url_list to user
@@ -80,7 +80,7 @@ async def stock(ctx):
         url = url_list[i][0]
         stock_ = url_list[i][1]
         name = url_list[i][3]
-        formatted_time = url_list[i][4].strftime('%b %m at %H:%M')
+        formatted_time = url_list[i][4].strftime('%b %d at %H:%M')
         embed = discord.Embed(title=name+' --- '+stock_,
                               url=url,
                               description='Last checked '+formatted_time
