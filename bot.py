@@ -22,7 +22,7 @@ fart_vc = [["Doodoo Bot's Doohole", 808025131690754089],
 farts = [["fart-extra.mp3", 15],
          ["vv-wet-fart.mp3", 5],
          ["nuclear-fart.mp3", 1],
-         ["bonk.wav", 3]
+         ["bonk.wav", 3],
          ["stinky.mp3", 8]]
 
 farts_t = list(map(list, zip(*farts)))
