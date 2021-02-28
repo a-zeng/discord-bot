@@ -8,12 +8,24 @@ from discord import File, User
 from discord.ext import commands
 import asyncio
 from bs4 import BeautifulSoup
+import random
 
 # Define list of URLs and other info (URL, stock, still_in_stock, product name, last checked)
 url_list = [#["https://www.microcenter.com/product/510223/asus-b450-i-rog-strix-gaming-amd-am4-mitx-motherboard?storeid=121", '', 0, "ASUS B450-I", 0],
             #["https://www.microcenter.com/product/510838/gigabyte-b450i-aorus-pro-wifi-amd-am4-mini-itx-motherboard?storeid=121", '', 0, "Gigabyte B450I", 0]
             ["https://www.microcenter.com/search/search_results.aspx?Ntt=GeForce+RTX+3060+Ti&searchButton=search&storeid=121", '', 0, "RTX 3060 Ti", 0],
             ["https://www.microcenter.com/search/search_results.aspx?Ntt=rtx+3070+graphics+card&searchButton=search&storeid=121", '', 0, "RTX 3070", 0]]
+
+fart_vc = [["Doodoo Bot's Doohole", 808025131690754089],
+           ["Wastierlands", 815646531309797468]]
+
+farts = [["fart-extra.mp3", 15],
+          ["vv-wet-fart.mp3", 5],
+          ["nuclear-fart.mp3", 2],
+          ["bonk.wav", 7]]
+
+farts_t = list(map(list, zip(*farts)))
+fvc_n = 0
 polling_freq = 300                                                              # in seconds
 
 # Setting up environment
@@ -45,9 +57,9 @@ async def on_ready():
     global vc
 
     try:
-        doohole_channel = bot.get_channel(808025131690754089)
+        doohole_channel = bot.get_channel(fart_vc[fvc_n][1])
         print('Connected to #' + str(doohole_channel))
-        vc = await doohole_channel.connect()
+        vc = await doohole_channel.connect(reconnect=True)
         print('Entered the doohole')
     except Exception as e:
         print(e)
@@ -58,19 +70,62 @@ async def on_voice_state_update(member, before, after):
     # print("Member: " + str(member))
     # print("Before: " + str(before))
     # print("After: " + str(after))
+    await bot.wait_until_ready()
     global vc
+    if member == vc.guild.get_member(718591315742425169): return None
 
-    if member != "Doodoo Bot#1143" and before.channel is None and after.channel.name == "Doodoo Bot's Doohole":
+    await asyncio.sleep(0.5)
+
+    if before.channel is None and after.channel.name == fart_vc[fvc_n][0]:
         print("Someone joined my doohole!")
-        fart = vc.play(discord.FFmpegPCMAudio("fart.mp3"))
-        # while vc.is_playing():
-        # await asyncio.sleep(0.1)
-        await asyncio.sleep(0.75)
-        print("Done farting")
+        chosen_fart = random.choices(farts_t[0], farts_t[1], k=1)[0]
+        print("Playing " + str(chosen_fart))
+        sound_loc = "sounds" + os.sep + chosen_fart
+        fart = vc.play(discord.FFmpegPCMAudio(sound_loc))
+        while vc.is_playing():
+            await asyncio.sleep(0.1)
+        print("Done farting, ejecting " + str(member))
         await member.move_to(None)
 
-    if member != "Doodoo Bot#1143" and after.channel is None: # and before.channel.name == "Doodoo Bot's Doohole":
+    if after.channel is None:
         vc.stop()
+
+@bot.command(help='Changes the doohole voice channel')
+@commands.is_owner()
+async def doohole(ctx, *args):
+    global vc, fvc_n
+    print("Arguments for dd.doohole: " + str(args))
+    if len(args) < 1:
+        embed = discord.Embed(title="Available Dooholes to Enter:",
+                              description="Add the number as an argument to this command")
+        inc = 0
+        for fvc in fart_vc:
+            embed.add_field(name=inc, value=fvc[0])
+            inc += 1
+        await ctx.send(embed=embed)
+    else:
+        try:
+            fvc_n = int(args[0])
+            await ctx.send("Swapping to " + fart_vc[fvc_n][0])
+            print("Entering " + fart_vc[fvc_n][0])
+            await vc.disconnect()
+            vc = await bot.get_channel(fart_vc[fvc_n][1]).connect(reconnect=True)
+            print("Successfully entered")
+
+        except Exception as e:
+            await ctx.send("Encountered an error while connecting")
+            print(e)
+
+@bot.command(help='Chances of getting a certain fart when joining its lair')
+async def fartchance(ctx):
+    embed = discord.Embed(title="Fart Chances:",
+                          description="Percent chance of a specific fart noise occurring")
+    f_sum = sum(farts_t[1])
+    for fart in farts:
+        chance = str(round(fart[1] / f_sum * 100, 2)) + "%"
+        embed.add_field(name=fart[0], value=chance)
+    await ctx.send(embed=embed)
+
 
 # Command that provides last updated information in url_list to user
 @bot.command()
@@ -91,7 +146,7 @@ async def stock(ctx):
 @bot.command()
 async def bonk(ctx):
     # await ctx.send("bonk")
-    await ctx.send(file=File('bonk.wav'))
+    await ctx.send(file=File('sounds/bonk.wav'))
 
 # Command that sends out an annoying reminder every minute until dealt with
 @bot.command()
