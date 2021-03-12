@@ -10,15 +10,14 @@ import asyncio
 from bs4 import BeautifulSoup
 import random
 
-# Define list of URLs and other info (URL, stock, still_in_stock, product name, last checked)
+# Define list of URLs and other info (URL, stock, still_in_stock, product name, last checked, vendor)
 url_list = [
     # ["https://www.microcenter.com/product/510223/asus-b450-i-rog-strix-gaming-amd-am4-mitx-motherboard?storeid=121", '', 0, "ASUS B450-I", 0],
     # ["https://www.microcenter.com/product/510838/gigabyte-b450i-aorus-pro-wifi-amd-am4-mini-itx-motherboard?storeid=121", '', 0, "Gigabyte B450I", 0]
     ["https://www.microcenter.com/search/search_results.aspx?Ntt=GeForce+RTX+3060+Ti&searchButton=search&storeid=121",
-     '', 0, "RTX 3060 Ti", 0],
-    [
-        "https://www.microcenter.com/search/search_results.aspx?Ntt=rtx+3070+graphics+card&searchButton=search&storeid=121",
-        '', 0, "RTX 3070", 0]]
+     '', 0, "RTX 3060 Ti", 0, "MicroCenter"],
+    ["https://www.microcenter.com/search/search_results.aspx?Ntt=rtx+3070+graphics+card&searchButton=search&storeid=121",
+     '', 0, "RTX 3070", 0, "MicroCenter"]]
 
 fart_vc = [["Doodoo Bot's Doohole", 808025131690754089],
            ["Wastierlands", 815646531309797468]]
@@ -53,7 +52,7 @@ def scrape_stock(url):
     soup_ = BeautifulSoup(response.content, 'html.parser')
     tablist = soup_.find('div', class_="my-store-only")
     stock_string = tablist.find('li').text
-    print(stock_string)
+    # print(" - " + str(stock_string))
     store_stock = str(stock_string.split(" ")[0])
     return store_stock
 
@@ -234,28 +233,36 @@ async def fetch_stock():
 
     while not bot.is_closed():
         try:
-            print("Fetching HTML...")
+            print("-------------------- Fetching HTML... --------------------")
 
             for i in range(len(url_list)):  # Iterate through URLs in url_list
+                # Get values
                 url = url_list[i][0]
-                stock = url_list[i][1] = scrape_stock(url)  # Set the stock to the value scraped
+                vendor = url_list[i][5]
                 still_in_stock = url_list[i][2]
                 name = url_list[i][3]
                 last_checked = url_list[i][4] = datetime.datetime.now()
-                print(str(last_checked) + " - Fetched " + name + ": " + stock)
+
+                # Check which vendor (for different stock scraping)
+                if vendor == "MicroCenter":
+                    stock = url_list[i][1] = scrape_stock(url)  # Set the stock to the value scraped
+                else:
+                    stock = url_list[i][1] = 0
+
+                print(" " + str(last_checked) + " - Fetched " + name + " from " + vendor + ": " + stock)
 
                 if stock != "0":  # If in stock
                     if still_in_stock == 0:  # If just in stock
-                        await channel_computer_parts.send(name + " is in stock at MicroCenter! - " + stock + "\n" + url)
+                        await channel_computer_parts.send(name + " is in stock at " + vendor + "! - " + stock + "\n" + url)
                         url_list[i][2] = 1
                 else:  # If sold out
                     # await channel_computer_parts.send(name + " is NOT in stock at MicroCenter! \n" + url)
                     if still_in_stock == 1:
                         await channel_computer_parts.send(
-                            name + " is NO LONGER in stock at MicroCenter! - " + stock + "\n" + url)
+                            name + " is NO LONGER in stock " + vendor + "! - " + stock + "\n" + url)
                         url_list[i][2] = 0
 
-            print(url_list)  # Print url_list for telemetry
+            # print(url_list)  # Print url_list for telemetry
 
             await asyncio.sleep(polling_freq)
         except Exception as e:
