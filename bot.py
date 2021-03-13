@@ -10,14 +10,45 @@ import asyncio
 from bs4 import BeautifulSoup
 import random
 
+
 # Define list of URLs and other info (URL, stock, still_in_stock, product name, last checked, vendor)
-url_list = [
-    # ["https://www.microcenter.com/product/510223/asus-b450-i-rog-strix-gaming-amd-am4-mitx-motherboard?storeid=121", '', 0, "ASUS B450-I", 0],
-    # ["https://www.microcenter.com/product/510838/gigabyte-b450i-aorus-pro-wifi-amd-am4-mini-itx-motherboard?storeid=121", '', 0, "Gigabyte B450I", 0]
-    ["https://www.microcenter.com/search/search_results.aspx?Ntt=GeForce+RTX+3060+Ti&searchButton=search&storeid=121",
-     '', 0, "RTX 3060 Ti", 0, "MicroCenter"],
-    ["https://www.microcenter.com/search/search_results.aspx?Ntt=rtx+3070+graphics+card&searchButton=search&storeid=121",
-     '', 0, "RTX 3070", 0, "MicroCenter"]]
+class CheckItem:
+
+    def __init__(self, url, product_name, vendor):
+        self.url = url
+        self.name = product_name
+        self.vendor = vendor
+        self.stock = "0"
+        self.in_stock = False
+        self.last_checked = datetime.datetime.now()
+
+    def update_last_checked(self):
+        self.last_checked = datetime.datetime.now()
+
+    def update_stock(self, n):
+        self.stock = n
+
+    # Scrapes the stock of the URL from the Microcenter website and returns the stock
+    def scrape_mc(self):
+        print("Scraping " + self.url + "...")
+        response = requests.get(self.url)
+        soup_ = BeautifulSoup(response.content, 'html.parser')
+        tablist = soup_.find('div', class_="my-store-only")
+        stock_string = tablist.find('li').text
+        store_stock = str(stock_string.split(" ")[0])
+        return store_stock
+
+    # Determines which scraping method to use and prints data
+    def scrape_stock(self):
+        if self.vendor == "MicroCenter":
+            self.stock = self.scrape_mc()
+
+        print(" " + str(self.last_checked) + " - Fetched " + self.name + " from " + self.vendor + ": " + self.stock)
+        self.update_last_checked()
+
+
+item_list = [CheckItem("https://www.microcenter.com/search/search_results.aspx?Ntt=GeForce+RTX+3060+Ti&searchButton=search&storeid=121", "RTX 3060 Ti", "MicroCenter"),
+             CheckItem("https://www.microcenter.com/search/search_results.aspx?Ntt=rtx+3070+graphics+card&searchButton=search&storeid=121", "RTX 3070", "MicroCenter")]
 
 fart_vc = [["Doodoo Bot's Doohole", 808025131690754089],
            ["Wastierlands", 815646531309797468]]
@@ -31,9 +62,9 @@ farts = [["fart-extra.mp3", 15],
 
 users_in_channel = []
 
-farts_t = list(map(list, zip(*farts)))
+farts_t = list(map(list, zip(*farts)))      # Transposes farts
 fvc_n = 1
-polling_freq = 300  # in seconds
+polling_freq = 5  # in seconds
 
 # Setting up environment
 load_dotenv()
@@ -43,18 +74,6 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 # SERVER = 'Doodooland'
 bot = commands.Bot(command_prefix='dd.', description="In fact a piece of doodoo")
 vc = 1
-
-
-# Scrapes the stock of the URL from the Microcenter website and returns the stock
-def scrape_stock(url):
-    print("Scraping " + url + "...")
-    response = requests.get(url)
-    soup_ = BeautifulSoup(response.content, 'html.parser')
-    tablist = soup_.find('div', class_="my-store-only")
-    stock_string = tablist.find('li').text
-    # print(" - " + str(stock_string))
-    store_stock = str(stock_string.split(" ")[0])
-    return store_stock
 
 
 # Event that triggers once the bot is ready
@@ -77,53 +96,43 @@ async def on_ready():
 # Command that plays a soundbite when someone joins the voice channel
 @bot.event
 async def on_voice_state_update(member, before, after):
-    # print("Member: " + str(member))
-    # print("Before: " + str(before))
-    # print("After: " + str(after))
     await bot.wait_until_ready()
     global vc, users_in_channel
-    if member == vc.guild.get_member(718591315742425169):
-        return None
-    print("-------------------- Detected voice activity change --------------------")
-    print("User count on voice state update: " + str(users_in_channel))
-
-    await asyncio.sleep(0.5)
+    if member.bot: return None  # End command if the member is a bot
 
     try:
         if after.channel.name == fart_vc[fvc_n][0]:
-            print(str(member) + " joined my doohole!")
+            print("-------------------- Detected relevant voice activity change --------------------")
+            print("Users in channel: " + str(users_in_channel) + " | " + str(member) + " joined my doohole!")
             users_in_channel.append(str(member))
 
             # Choose the fart and play it
             chosen_fart = random.choices(farts_t[0], farts_t[1], k=1)[0]
             print("Playing " + str(chosen_fart))
+            await asyncio.sleep(0.2)
             sound_loc = "sounds" + os.sep + chosen_fart
             fart = vc.play(discord.FFmpegPCMAudio(sound_loc))
 
+            # While sound is playing and the user is still in the channel
             while vc.is_playing():
                 await asyncio.sleep(0.1)
                 for usr in users_in_channel:
-                    # print("  User - " + usr + " | Member - " + str(member))
-                    if usr == str(member):
-                        break
+                    if usr == str(member): break
                 if not users_in_channel:
                     print("No users in channel, stopping music")
                     vc.stop()
+                    return
 
-            print("Done farting, attempting to eject " + str(member))
             for usr in users_in_channel:
                 if usr == str(member):
+                    print("Attempting to eject " + str(member))
                     await member.move_to(None)
 
     except Exception as e:
-        print("  ERROR - " + str(e))
+        pass
+        # print("  ERROR - " + str(e))
 
-    if after.channel is None:
-        users_in_channel = [usr for usr in users_in_channel if usr != str(member)]
-        # print("Attempting to stop sound")
-        # vc.stop()
-
-    print("-------------------- Users remaining: " + str(users_in_channel) + " --------------------")
+    users_in_channel = [usr for usr in users_in_channel if usr != str(member)] if after.channel is None else None
 
 
 @bot.command(help='Changes the doohole voice channel')
@@ -169,16 +178,14 @@ async def fartchance(ctx):
 @bot.command()
 async def stock(ctx):
     print("Returning stock info from url_list")
-    for i in range(len(url_list)):
-        url = url_list[i][0]
-        stock_ = url_list[i][1]
-        name = url_list[i][3]
-        formatted_time = url_list[i][4].strftime('%b %d at %H:%M')
-        embed = discord.Embed(title=name + ' --- ' + stock_,
-                              url=url,
-                              description='Last checked ' + formatted_time
-                              )
-        await ctx.send(embed=embed)
+    embed = discord.Embed(title="Current Stock",
+                          description='From the item list',
+                          color=0x28a45a)
+    for item in item_list:
+        embed.add_field(name=item.name + " --- " + item.stock + " in stock  |  Last checked " + str(item.last_checked.strftime('%b %d at %H:%M:%S')),
+                        value=item.url,
+                        inline=False)
+    await ctx.send(embed=embed)
 
 
 # Command that replies with bonk sound clip
@@ -224,7 +231,7 @@ async def change_polling_freq(ctx, new_freq: int):
 # Looping event that constantly fetches stock
 async def fetch_stock():
     await bot.wait_until_ready()
-    global url_list, channel_computer_parts
+    global item_list
     try:
         channel_computer_parts = bot.get_channel(717484895714410517)
         print('Connecting to #' + str(channel_computer_parts))
@@ -234,40 +241,38 @@ async def fetch_stock():
     while not bot.is_closed():
         try:
             print("-------------------- Fetching HTML... --------------------")
+            for item in item_list:
+                item.scrape_stock()
 
-            for i in range(len(url_list)):  # Iterate through URLs in url_list
-                # Get values
-                url = url_list[i][0]
-                vendor = url_list[i][5]
-                still_in_stock = url_list[i][2]
-                name = url_list[i][3]
-                last_checked = url_list[i][4] = datetime.datetime.now()
+                embed = discord.Embed(title="Current Stock",
+                                      description='From the item list',
+                                      color=0x28a45a)
+                for item in item_list:
+                    embed.add_field(name=item.name + " --- " + item.stock + " in stock  |  Last checked " + str(
+                        item.last_checked.strftime('%b %d at %H:%M:%S')),
+                                    value=item.url,
+                                    inline=False)
 
-                # Check which vendor (for different stock scraping)
-                if vendor == "MicroCenter":
-                    stock = url_list[i][1] = scrape_stock(url)  # Set the stock to the value scraped
-                else:
-                    stock = url_list[i][1] = 0
+                if not item.in_stock and item.stock != "0":   # If item was not in stock and some stock reported
+                    await channel_computer_parts.send(
+                        item.name + " is in stock at " + item.vendor + "! - " + item.stock + "\n" + item.url)
+                    item.in_stock = True
+                elif item.in_stock and item.stock == "0":     # If item was in stock and no more stock reported
+                    await channel_computer_parts.send(
+                        item.name + " is NO LONGER in stock at " + item.vendor + "! - " + item.stock + "\n" + item.url)
+                    item.in_stock = False
 
-                print(" " + str(last_checked) + " - Fetched " + name + " from " + vendor + ": " + stock)
-
-                if stock != "0":  # If in stock
-                    if still_in_stock == 0:  # If just in stock
-                        await channel_computer_parts.send(name + " is in stock at " + vendor + "! - " + stock + "\n" + url)
-                        url_list[i][2] = 1
-                else:  # If sold out
-                    # await channel_computer_parts.send(name + " is NOT in stock at MicroCenter! \n" + url)
-                    if still_in_stock == 1:
-                        await channel_computer_parts.send(
-                            name + " is NO LONGER in stock " + vendor + "! - " + stock + "\n" + url)
-                        url_list[i][2] = 0
-
-            # print(url_list)  # Print url_list for telemetry
-
-            await asyncio.sleep(polling_freq)
         except Exception as e:
             print(e)
+
+        current_hour = int(datetime.datetime.now().strftime('%H'))
+        current_day = int(datetime.datetime.now().strftime('%u'))
+
+        # If between 8 AM and 4 PM and not on the weekend
+        if 8 <= current_hour <= 16 and current_day != 6 and current_day != 7:
             await asyncio.sleep(polling_freq)
+        else:
+            await asyncio.sleep(600)
 
 
 bot.loop.create_task(fetch_stock())
