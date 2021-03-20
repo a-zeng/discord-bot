@@ -98,7 +98,8 @@ async def on_ready():
 async def on_voice_state_update(member, before, after):
     await bot.wait_until_ready()
     global vc, users_in_channel
-    if member.bot: return None  # End command if the member is a bot
+    if member.bot:
+        return None  # End command if the member is a bot
 
     try:
         if after.channel.name == fart_vc[fvc_n][0]:
@@ -132,7 +133,7 @@ async def on_voice_state_update(member, before, after):
         pass
         # print("  ERROR - " + str(e))
 
-    users_in_channel = [usr for usr in users_in_channel if usr != str(member)] if after.channel is None else None
+    users_in_channel = [usr for usr in users_in_channel if usr != str(member)] if after.channel is None else []
 
 
 @bot.command(help='Changes the doohole voice channel')
