@@ -103,7 +103,7 @@ async def on_voice_state_update(member, before, after):
 
     try:
         if after.channel.name == fart_vc[fvc_n][0]:
-            print("-------------------- Detected relevant voice activity change --------------------")
+            print("-------------------- Relevant voice activity on " + str(datetime.datetime.now().strftime('%b %d at %H:%M:%S')) + " --------------------")
             print("Users in channel: " + str(users_in_channel) + " | " + str(member) + " joined my doohole!")
             users_in_channel.append(str(member))
 
