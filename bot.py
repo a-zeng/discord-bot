@@ -232,7 +232,7 @@ async def change_polling_freq(ctx, new_freq: int):
 # Looping event that constantly fetches stock
 async def fetch_stock():
     await bot.wait_until_ready()
-    global item_list
+    global item_list, vc
     try:
         channel_computer_parts = bot.get_channel(717484895714410517)
         print('Connecting to #' + str(channel_computer_parts))
@@ -276,5 +276,15 @@ async def fetch_stock():
             await asyncio.sleep(600)
 
 
+async def refresh_connection():
+    global vc, fart_vc, fvc_n
+    await asyncio.sleep(10)
+    await bot.wait_until_ready()
+    await vc.disconnect()
+    vc = await bot.get_channel(fart_vc[fvc_n][1]).connect(reconnect=True)
+    print("Refreshing connection to " + fart_vc[fvc_n][0] + ", waiting a day")
+    await asyncio.sleep(86400)
+
 bot.loop.create_task(fetch_stock())
+bot.loop.create_task(refresh_connection())
 bot.run(TOKEN)
