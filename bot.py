@@ -14,16 +14,20 @@ import random
 # Define list of URLs and other info (URL, stock, still_in_stock, product name, last checked, vendor)
 class CheckItem:
 
-    def __init__(self, url, product_name, vendor):
+    def __init__(self, url, product_name, vendor, freq):
         self.url = url
         self.name = product_name
         self.vendor = vendor
         self.stock = "0"
         self.in_stock = False
         self.last_checked = datetime.datetime.now()
+        self.polling_frequency = freq
 
     def update_last_checked(self):
         self.last_checked = datetime.datetime.now()
+
+    def print_data(self):
+        print(" " + str(self.last_checked) + " - Fetched " + self.name + " from " + self.vendor + ": " + self.stock)
 
     def update_stock(self, n):
         self.stock = n
@@ -38,17 +42,25 @@ class CheckItem:
         store_stock = str(stock_string.split(" ")[0])
         return store_stock
 
+    def scrape_bb(self):
+        print("Scraping " + self.url + "...")
+        return str(0)
+
     # Determines which scraping method to use and prints data
     def scrape_stock(self):
         if self.vendor == "MicroCenter":
             self.stock = self.scrape_mc()
+        elif self.vendor == "BestBuy":
+            self.stock = self.scrape_bb()
 
-        print(" " + str(self.last_checked) + " - Fetched " + self.name + " from " + self.vendor + ": " + self.stock)
+        self.print_data()
         self.update_last_checked()
+        return True
 
 
-item_list = [CheckItem("https://www.microcenter.com/search/search_results.aspx?Ntt=GeForce+RTX+3060+Ti&searchButton=search&storeid=121", "RTX 3060 Ti", "MicroCenter"),
-             CheckItem("https://www.microcenter.com/search/search_results.aspx?Ntt=rtx+3070+graphics+card&searchButton=search&storeid=121", "RTX 3070", "MicroCenter")]
+item_list = [CheckItem("https://www.microcenter.com/search/search_results.aspx?Ntt=GeForce+RTX+3060+Ti&searchButton=search&storeid=121", "RTX 3060 Ti", "MicroCenter", 60),
+             CheckItem("https://www.microcenter.com/search/search_results.aspx?Ntt=rtx+3070+graphics+card&searchButton=search&storeid=121", "RTX 3070", "MicroCenter", 60),
+             CheckItem("https://www.bestbuy.com/site/nvidia-geforce-rtx-3060-ti-8gb-gddr6-pci-express-4-0-graphics-card-steel-and-black/6439402.p?skuId=6439402", "RTX 3060 Ti FE", "BestBuy", 5)]
 
 fart_vc = [["Doodoo Bot's Doohole", 808025131690754089],
            ["Wastierlands", 815646531309797468]]
@@ -64,7 +76,8 @@ users_in_channel = []
 
 farts_t = list(map(list, zip(*farts)))      # Transposes farts
 fvc_n = 1
-polling_freq = 5  # in seconds
+after_hours_polling_freq = 600  # in seconds
+vc_refresh_freq = 24    # in hours
 
 # Setting up environment
 load_dotenv()
@@ -223,14 +236,14 @@ async def annoy_reminder(ctx, user: User, reminder: str):
 @bot.command()
 @commands.is_owner()
 async def change_polling_freq(ctx, new_freq: int):
-    global polling_freq
-    polling_freq = new_freq
-    print("Changed polling_freq to " + str(polling_freq) + " seconds")
-    await ctx.send("Polling frequency set to " + str(polling_freq) + " seconds")
+    global after_hours_polling_freq
+    after_hours_polling_freq = new_freq
+    print("Changed polling_freq to " + str(after_hours_polling_freq) + " seconds")
+    await ctx.send("Polling frequency set to " + str(after_hours_polling_freq) + " seconds")
 
 
 # Looping event that constantly fetches stock
-async def fetch_stock():
+async def fetch_stock(item):
     await bot.wait_until_ready()
     global item_list, vc
     try:
@@ -242,26 +255,16 @@ async def fetch_stock():
     while not bot.is_closed():
         try:
             print("-------------------- Fetching HTML... --------------------")
-            for item in item_list:
-                item.scrape_stock()
+            item.scrape_stock()
 
-                embed = discord.Embed(title="Current Stock",
-                                      description='From the item list',
-                                      color=0x28a45a)
-                for item in item_list:
-                    embed.add_field(name=item.name + " --- " + item.stock + " in stock  |  Last checked " + str(
-                        item.last_checked.strftime('%b %d at %H:%M:%S')),
-                                    value=item.url,
-                                    inline=False)
-
-                if not item.in_stock and item.stock != "0":   # If item was not in stock and some stock reported
-                    await channel_computer_parts.send(
-                        item.name + " is in stock at " + item.vendor + "! - " + item.stock + "\n" + item.url)
-                    item.in_stock = True
-                elif item.in_stock and item.stock == "0":     # If item was in stock and no more stock reported
-                    await channel_computer_parts.send(
-                        item.name + " is NO LONGER in stock at " + item.vendor + "! - " + item.stock + "\n" + item.url)
-                    item.in_stock = False
+            if not item.in_stock and item.stock != "0":   # If item was not in stock and some stock reported
+                await channel_computer_parts.send(
+                    item.name + " is in stock at " + item.vendor + "! - " + item.stock + "\n" + item.url)
+                item.in_stock = True
+            elif item.in_stock and item.stock == "0":     # If item was in stock and no more stock reported
+                await channel_computer_parts.send(
+                    item.name + " is NO LONGER in stock at " + item.vendor + "! - " + item.stock + "\n" + item.url)
+                item.in_stock = False
 
         except Exception as e:
             print(e)
@@ -271,20 +274,22 @@ async def fetch_stock():
 
         # If between 8 AM and 4 PM and not on the weekend
         if 8 <= current_hour <= 16 and current_day != 6 and current_day != 7:
-            await asyncio.sleep(polling_freq)
+            await asyncio.sleep(item.polling_frequency)
         else:
-            await asyncio.sleep(600)
+            await asyncio.sleep(after_hours_polling_freq)
 
 
 async def refresh_connection():
-    global vc, fart_vc, fvc_n
+    global vc, fart_vc, fvc_n, vc_refresh_freq
     await asyncio.sleep(10)
     await bot.wait_until_ready()
     await vc.disconnect()
     vc = await bot.get_channel(fart_vc[fvc_n][1]).connect(reconnect=True)
-    print("Refreshing connection to " + fart_vc[fvc_n][0] + ", waiting a day")
-    await asyncio.sleep(86400)
+    print("Refreshing connection to " + fart_vc[fvc_n][0] + ", waiting " + str(vc_refresh_freq) + " hours")
+    await asyncio.sleep(vc_refresh_freq * 3600)
 
-bot.loop.create_task(fetch_stock())
+for i in item_list:
+    bot.loop.create_task(fetch_stock(i))
+
 bot.loop.create_task(refresh_connection())
 bot.run(TOKEN)
