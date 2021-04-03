@@ -3,6 +3,7 @@ import time
 import datetime
 import discord
 import os
+import csv
 from dotenv import load_dotenv
 from discord import File, User
 from discord.ext import commands
@@ -11,17 +12,32 @@ from bs4 import BeautifulSoup
 import random
 
 
+# Add items to item list from CSV
+item_list = []
+
+
 # Define list of URLs and other info (URL, stock, still_in_stock, product name, last checked, vendor)
 class CheckItem:
 
-    def __init__(self, url, product_name, vendor, freq):
-        self.url = url
+    def __init__(self, search, product_name, vendor, freq):
+        self.search = search
+        self.url = "a"
         self.name = product_name
         self.vendor = vendor
         self.stock = "0"
         self.in_stock = False
         self.last_checked = datetime.datetime.now()
         self.polling_frequency = freq
+        self.use_sku = False
+
+        if vendor == "BestBuy":
+            try:
+                int(self.search)
+                self.use_sku = True
+            except ValueError:
+                self.url = search
+        else:
+            self.url = search
 
     def update_last_checked(self):
         self.last_checked = datetime.datetime.now()
@@ -34,16 +50,36 @@ class CheckItem:
 
     # Scrapes the stock of the URL from the Microcenter website and returns the stock
     def scrape_mc(self):
-        print("Scraping " + self.url + "...")
-        response = requests.get(self.url)
+        print("Scraping " + self.search + "...")
+        response = requests.get(self.search)
         soup_ = BeautifulSoup(response.content, 'html.parser')
         tablist = soup_.find('div', class_="my-store-only")
         stock_string = tablist.find('li').text
         store_stock = str(stock_string.split(" ")[0])
         return store_stock
 
+    # Scrapes the stock of the URL from the Best Buy website and returns the stock
     def scrape_bb(self):
-        print("Scraping " + self.url + "...")
+        print("Scraping " + self.search + "...")
+        return str(0)
+
+    # Scrapes the stock of SKU using the Best Buy API and returns the stock
+    def scrape_bb_api(self):
+        print("Scraping SKU: " + self.search + "...")
+        api_url = "https://api.bestbuy.com/v1/products(sku=" + self.search + ")?apiKey=" + BB_API_KEY + \
+                  "&sort=url.asc&show=name,onlineAvailability,url&format=json"
+        try:
+            response = requests.get(api_url)
+            query_result = response.json()
+            for product in query_result["products"]:
+                self.name = "Best Buy - " + product['name']
+                self.url = product['url']
+                if product['onlineAvailability']:
+                    return "In Stock"
+
+        except Exception as err:
+            print(f'Other error occurred: {err}')
+
         return str(0)
 
     # Determines which scraping method to use and prints data
@@ -51,19 +87,29 @@ class CheckItem:
         if self.vendor == "MicroCenter":
             self.stock = self.scrape_mc()
         elif self.vendor == "BestBuy":
-            self.stock = self.scrape_bb()
+            if self.use_sku:
+                self.stock = self.scrape_bb_api()
+            else:
+                self.stock = self.scrape_bb()
 
         self.print_data()
         self.update_last_checked()
         return True
 
 
-item_list = [CheckItem("https://www.microcenter.com/search/search_results.aspx?Ntt=GeForce+RTX+3060+Ti&searchButton=search&storeid=121", "RTX 3060 Ti", "MicroCenter", 60),
-             CheckItem("https://www.microcenter.com/search/search_results.aspx?Ntt=rtx+3070+graphics+card&searchButton=search&storeid=121", "RTX 3070", "MicroCenter", 60),
-             CheckItem("https://www.bestbuy.com/site/nvidia-geforce-rtx-3060-ti-8gb-gddr6-pci-express-4-0-graphics-card-steel-and-black/6439402.p?skuId=6439402", "RTX 3060 Ti FE", "BestBuy", 5)]
+# Refreshes the database
+def refresh_database():
+    print("Pulling changes to database .csv files")
+    with open('database/item_list.csv', 'r') as item_file:
+        reader = csv.reader(item_file, delimiter=",")
+        for row in reader:
+            item_list.append(CheckItem(row[0], row[1], row[2], int(row[3])))
 
+
+refresh_database()
 fart_vc = [["Doodoo Bot's Doohole", 808025131690754089],
            ["Wastierlands", 815646531309797468]]
+vc = 1
 
 farts = [["fart-extra.mp3", 15],
          ["vv-wet-fart.mp3", 5],
@@ -84,9 +130,8 @@ load_dotenv()
 
 # Discord bot set up
 TOKEN = os.getenv('DISCORD_TOKEN')
-# SERVER = 'Doodooland'
+BB_API_KEY = os.getenv('BEST_BUY_API_KEY')
 bot = commands.Bot(command_prefix='dd.', description="In fact a piece of doodoo")
-vc = 1
 
 
 # Event that triggers once the bot is ready
@@ -242,6 +287,14 @@ async def change_polling_freq(ctx, new_freq: int):
     await ctx.send("Polling frequency set to " + str(after_hours_polling_freq) + " seconds")
 
 
+# Command that refreshes the running memory using data from the bot's database
+@bot.command()
+@commands.is_owner()
+async def refresh_database(ctx):
+    refresh_database()
+    await ctx.send("Refreshed the database")
+
+
 # Looping event that constantly fetches stock
 async def fetch_stock(item):
     await bot.wait_until_ready()
@@ -258,11 +311,11 @@ async def fetch_stock(item):
             item.scrape_stock()
 
             if not item.in_stock and item.stock != "0":   # If item was not in stock and some stock reported
-                await channel_computer_parts.send(
+                await channel_computer_parts.send("<@&827997603869884487> " +
                     item.name + " is in stock at " + item.vendor + "! - " + item.stock + "\n" + item.url)
                 item.in_stock = True
             elif item.in_stock and item.stock == "0":     # If item was in stock and no more stock reported
-                await channel_computer_parts.send(
+                await channel_computer_parts.send("<@&827997603869884487> " +
                     item.name + " is NO LONGER in stock at " + item.vendor + "! - " + item.stock + "\n" + item.url)
                 item.in_stock = False
 
@@ -279,6 +332,7 @@ async def fetch_stock(item):
             await asyncio.sleep(after_hours_polling_freq)
 
 
+# Refreshes the bot's connection to the voice channel it currently resides in
 async def refresh_connection():
     global vc, fart_vc, fvc_n, vc_refresh_freq
     await asyncio.sleep(10)
@@ -288,8 +342,9 @@ async def refresh_connection():
     print("Refreshing connection to " + fart_vc[fvc_n][0] + ", waiting " + str(vc_refresh_freq) + " hours")
     await asyncio.sleep(vc_refresh_freq * 3600)
 
+
+# Run the bot and create the async tasks
 for i in item_list:
     bot.loop.create_task(fetch_stock(i))
-
 bot.loop.create_task(refresh_connection())
 bot.run(TOKEN)
