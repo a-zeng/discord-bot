@@ -117,7 +117,7 @@ farts = [["fart-extra.mp3", 15],
          ["nuclear-fart.mp3", 1],
          ["bonk.wav", 3],
          ["stinky.mp3", 8],
-         ["awaken-pillar-men.mp3", 0.1]
+         ["awaken-pillar-men.mp3", 0.1],
          ["SEGGS.mp3", 999]]
 
 users_in_channel = []
