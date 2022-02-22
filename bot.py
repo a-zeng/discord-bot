@@ -123,7 +123,7 @@ farts = [["fart-extra.mp3", 15],
 users_in_channel = []
 
 farts_t = list(map(list, zip(*farts)))      # Transposes farts
-fvc_n = 1
+fvc_n = 2
 after_hours_polling_freq = 600  # in seconds
 vc_refresh_freq = 24    # in hours
 
