@@ -108,7 +108,7 @@ def refresh_database():
 
 refresh_database()
 fart_vc = [["Doodoo Bot's Doohole", 808025131690754089],
-           ["Wastierlands", 815646531309797468]
+           ["Wastierlands", 815646531309797468],
            ["Genshin Sex", 945539415311274044]]
 vc = 1
 
