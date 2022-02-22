@@ -107,9 +107,9 @@ def refresh_database():
 
 
 refresh_database()
-fart_vc = [["Doodoo Bot's Doohole", 808025131690754089],
+fart_vc = [["Doodoo Bot's Doohole", 945551289457201163],
            ["Wastierlands", 815646531309797468],
-           ["Genshin Sex", 945539415311274044]]
+           ["TAKESHIIIIIII", 945539415311274044]]
 vc = 1
 
 farts = [["fart-extra.mp3", 15],
@@ -156,12 +156,15 @@ async def on_ready():
 # Command that plays a soundbite when someone joins the voice channel
 @bot.event
 async def on_voice_state_update(member, before, after):
+    print("Voice updated detected")
     await bot.wait_until_ready()
     global vc, users_in_channel
     if member.bot:
+        print("Bot Joined")
         return None  # End command if the member is a bot
 
     try:
+        print("After channel: " + after.channel.name + " | Current channel: " + fart_vc[fvc_n][0])
         if after.channel.name == fart_vc[fvc_n][0]:
             print("-------------------- Relevant voice activity on " + str(datetime.datetime.now().strftime('%b %d at %H:%M:%S')) + " --------------------")
             print("Users in channel: " + str(users_in_channel) + " | " + str(member) + " joined my doohole!")
