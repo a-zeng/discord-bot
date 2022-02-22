@@ -108,7 +108,8 @@ def refresh_database():
 
 refresh_database()
 fart_vc = [["Doodoo Bot's Doohole", 808025131690754089],
-           ["Wastierlands", 815646531309797468]]
+           ["Wastierlands", 815646531309797468]
+           ["Genshin Sex", 945539415311274044]]
 vc = 1
 
 farts = [["fart-extra.mp3", 15],
@@ -116,7 +117,8 @@ farts = [["fart-extra.mp3", 15],
          ["nuclear-fart.mp3", 1],
          ["bonk.wav", 3],
          ["stinky.mp3", 8],
-         ["awaken-pillar-men.mp3", 0.1]]
+         ["awaken-pillar-men.mp3", 0.1]
+         ["SEGGS.mp3", 999]]
 
 users_in_channel = []
 
